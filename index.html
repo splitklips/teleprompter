@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Splitklips Teleprompter</title>
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    :root {
+      --bg-page: #121212;
+      --bg-glass: rgba(30, 34, 42, 0.7);
+      --bg-glass-hover: rgba(40, 45, 55, 0.8);
+      --bg-input: rgba(255, 255, 255, 0.06);
+      --bg-input-hover: rgba(255, 255, 255, 0.1);
+      --border-glass: rgba(120, 140, 170, 0.15);
+      --border-hover: rgba(120, 140, 170, 0.3);
+      --text: #ffffff;
+      --text-dim: rgba(255, 255, 255, 0.6);
+      --text-muted: rgba(255, 255, 255, 0.35);
+      --accent: #00E599;
+      --accent-glow: rgba(0, 229, 153, 0.4);
+      --accent-dim: rgba(0, 229, 153, 0.12);
+      --red: #FF4D6A;
+      --red-glow: rgba(255, 77, 106, 0.5);
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 20px;
+      --radius-xl: 24px;
+    }
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg-page); color: var(--text); min-height: 100vh; overflow: hidden; line-height: 1.5; }
+    .mode-select { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 32px; background: var(--bg-page); }
+    .mode-select.hidden { display: none; }
+    .mode-container { width: 100%; max-width: 420px; }
+    .logo { text-align: center; margin-bottom: 48px; }
+    .logo-icon { width: 68px; height: 68px; margin: 0 auto 20px; background: linear-gradient(135deg, var(--accent), #00B377); border-radius: 18px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 32px var(--accent-glow); }
+    .logo-icon svg { width: 34px; height: 34px; }
+    .logo h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 6px; }
+    .logo p { color: var(--text-muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 500; }
+    .mode-btn { width: 100%; padding: 22px 26px; margin-bottom: 14px; background: var(--bg-glass); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--border-glass); border-radius: var(--radius-lg); cursor: pointer; transition: all 0.25s ease; display: flex; align-items: center; gap: 18px; text-align: left; color: var(--text); box-shadow: 0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04); }
+    .mode-btn:hover { background: var(--bg-glass-hover); border-color: var(--border-hover); transform: translateY(-2px); }
+    .mode-btn-icon { width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .mode-btn-icon.controller { background: rgba(59, 130, 246, 0.15); color: #60A5FA; }
+    .mode-btn-icon.display { background: var(--accent-dim); color: var(--accent); }
+    .mode-btn-icon svg { width: 24px; height: 24px; }
+    .mode-btn-text h3 { font-size: 16px; font-weight: 600; margin-bottom: 3px; }
+    .mode-btn-text p { font-size: 13px; color: var(--text-dim); }
+    .controller-view { display: none; height: 100vh; background: var(--bg-page); flex-direction: column; padding: 16px; gap: 12px; }
+    .controller-view.active { display: flex; }
+    .top-toolbar { background: var(--bg-glass); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid var(--border-glass); border-radius: var(--radius-lg); padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; box-shadow: 0 4px 24px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.04); flex-shrink: 0; flex-wrap: wrap; }
+    .toolbar-section { display: flex; align-items: center; gap: 8px; }
+    .toolbar-divider { width: 1px; height: 24px; background: var(--border-glass); }
+    .brand { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13px; }
+    .brand-icon { width: 26px; height: 26px; background: linear-gradient(135deg, var(--accent), #00B377); border-radius: 6px; display: flex; align-items: center; justify-content: center; }
+    .brand-icon svg { width: 14px; height: 14px; }
+    .connection-badge { display: flex; align-items: center; gap: 6px; padding: 5px 10px; background: var(--bg-input); border: 1px solid transparent; border-radius: 100px; font-size: 10px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+    .connection-badge:hover { background: var(--bg-input-hover); border-color: var(--border-glass); }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); transition: all 0.3s; }
+    .status-dot.live { background: var(--accent); box-shadow: 0 0 8px var(--accent), 0 0 20px var(--accent-glow); animation: glow-pulse 2s ease-in-out infinite; }
+    @keyframes glow-pulse { 0%, 100% { box-shadow: 0 0 8px var(--accent), 0 0 20px var(--accent-glow); } 50% { box-shadow: 0 0 12px var(--accent), 0 0 30px var(--accent-glow); } }
+    .status-label { color: var(--text-dim); }
+    .status-label.live { color: var(--accent); }
+    .tool-btn { height: 28px; min-width: 28px; padding: 0 6px; border-radius: var(--radius-sm); border: none; background: var(--bg-input); color: var(--text-dim); font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s; }
+    .tool-btn:hover { background: var(--bg-input-hover); color: var(--text); }
+    .tool-btn.active { background: var(--accent); color: #000; }
+    .tool-btn svg { width: 14px; height: 14px; }
+    .color-picker-wrap { display: flex; align-items: center; gap: 4px; }
+    .color-label { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .color-picker { width: 28px; height: 28px; border: none; border-radius: var(--radius-sm); cursor: pointer; padding: 0; background: var(--bg-input); overflow: hidden; }
+    .color-picker::-webkit-color-swatch-wrapper { padding: 3px; }
+    .color-picker::-webkit-color-swatch { border-radius: 4px; border: none; }
+    .slider-wrap { display: flex; align-items: center; gap: 5px; }
+    .slider-label { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
+    input[type="range"] { width: 55px; height: 4px; -webkit-appearance: none; background: rgba(255,255,255,0.1); border-radius: 2px; outline: none; }
+    input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--text); cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+    input[type="range"].large-slider { width: 120px; height: 6px; }
+    input[type="range"].large-slider::-webkit-slider-thumb { width: 16px; height: 16px; }
+    .slider-value { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); min-width: 32px; }
+    .play-controls { display: flex; align-items: center; gap: 6px; }
+    .reset-btn { width: 28px; height: 28px; border-radius: 50%; border: none; background: var(--bg-input); color: var(--text-dim); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+    .reset-btn:hover { background: var(--bg-input-hover); color: var(--text); }
+    .reset-btn svg { width: 12px; height: 12px; }
+    .play-btn { width: 38px; height: 38px; border-radius: 50%; border: none; background: var(--accent); color: #000; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; box-shadow: 0 4px 16px var(--accent-glow); }
+    .play-btn:hover { transform: scale(1.08); }
+    .play-btn.playing { background: var(--red); box-shadow: 0 4px 16px var(--red-glow); }
+    .play-btn svg { width: 16px; height: 16px; }
+    .time-display { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 500; color: var(--accent); padding: 5px 8px; background: var(--accent-dim); border-radius: var(--radius-sm); min-width: 50px; text-align: center; }
+    .scroll-controls { display: flex; align-items: center; gap: 2px; }
+    .scroll-btn { width: 24px; height: 24px; border-radius: 5px; border: none; background: var(--bg-input); color: var(--text-dim); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+    .scroll-btn:hover { background: var(--bg-input-hover); color: var(--text); }
+    .scroll-btn svg { width: 10px; height: 10px; }
+    .position-text { font-family: 'JetBrains Mono', monospace; font-size: 8px; color: var(--text-muted); min-width: 36px; text-align: center; }
+    .exit-btn { width: 28px; height: 28px; border-radius: var(--radius-sm); border: none; background: var(--bg-input); color: var(--text-dim); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+    .exit-btn:hover { background: rgba(255, 77, 106, 0.15); color: var(--red); }
+    .exit-btn svg { width: 12px; height: 12px; }
+    .bg-toggle { display: flex; align-items: center; gap: 4px; }
+    .bg-toggle-btn { width: 28px; height: 28px; border-radius: var(--radius-sm); border: 2px solid var(--border-glass); cursor: pointer; transition: all 0.2s; }
+    .bg-toggle-btn.dark { background: #000; }
+    .bg-toggle-btn.light { background: #fff; }
+    .bg-toggle-btn.active { border-color: var(--accent); box-shadow: 0 0 8px var(--accent-glow); }
+    .connection-popup { position: fixed; top: 80px; left: 50%; transform: translateX(-50%); z-index: 300; background: var(--bg-glass); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid var(--border-glass); border-radius: var(--radius-lg); padding: 24px; width: 220px; box-shadow: 0 16px 48px rgba(0,0,0,0.4); display: none; }
+    .connection-popup.visible { display: block; }
+    .connection-popup .qr-wrapper { background: #fff; padding: 10px; border-radius: var(--radius-sm); display: flex; justify-content: center; margin-bottom: 14px; }
+    .connection-popup .peer-code { font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 600; text-align: center; letter-spacing: 0.1em; margin-bottom: 6px; }
+    .connection-popup .hint { font-size: 11px; color: var(--text-muted); text-align: center; }
+    .popup-close { position: absolute; top: 10px; right: 10px; width: 26px; height: 26px; border-radius: 50%; border: none; background: var(--bg-input); color: var(--text-dim); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .popup-close:hover { background: var(--bg-input-hover); color: var(--text); }
+    .popup-close svg { width: 12px; height: 12px; }
+    .master-frame { flex: 1; background: var(--bg-glass); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid var(--border-glass); border-radius: var(--radius-xl); box-shadow: 0 16px 64px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04); position: relative; overflow: hidden; display: flex; flex-direction: column; }
+    .display-inner { flex: 1; margin: 12px; background: #000; border-radius: 16px; position: relative; overflow: hidden; transition: background 0.3s ease; }
+    .display-inner.light-bg { background: #ffffff; }
+    .focus-guide { position: absolute; top: 50%; left: 0; right: 0; transform: translateY(-50%); pointer-events: none; display: flex; justify-content: space-between; padding: 0 14px; z-index: 50; }
+    .focus-arrow { width: 0; height: 0; border-top: 12px solid transparent; border-bottom: 12px solid transparent; opacity: 0.85; }
+    .focus-arrow.left { border-right: 20px solid var(--red); filter: drop-shadow(0 0 10px var(--red-glow)); }
+    .focus-arrow.right { border-left: 20px solid var(--red); filter: drop-shadow(0 0 10px var(--red-glow)); }
+    .editor-container { position: absolute; inset: 0; overflow: hidden; display: flex; justify-content: center; }
+    .editor-wrapper { width: 85%; max-width: 800px; will-change: transform; transform: translate3d(0, 0, 0); }
+    .editor { font-size: 48px; font-weight: 400; line-height: 1.5; color: #ffffff; text-align: center; outline: none; white-space: pre-wrap; caret-color: var(--red); }
+    .display-inner.light-bg .editor { color: #000000; }
+    .editor:empty::before { content: 'Type or paste your script here...'; color: var(--text-muted); }
+    .display-inner.light-bg .editor:empty::before { color: rgba(0,0,0,0.35); }
+    .toolbar-row-2 { background: var(--bg-glass); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid var(--border-glass); border-radius: var(--radius-lg); padding: 8px 14px; display: flex; align-items: center; justify-content: center; gap: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.2); flex-shrink: 0; }
+    .kbd-hints { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); font-size: 10px; color: var(--text-muted); display: flex; gap: 14px; background: var(--bg-glass); backdrop-filter: blur(12px); padding: 6px 14px; border-radius: 100px; border: 1px solid var(--border-glass); }
+    .kbd-hints kbd { background: rgba(255,255,255,0.08); padding: 2px 5px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 9px; margin-right: 3px; }
+    .display-view { display: none; min-height: 100vh; }
+    .display-view.active { display: block; }
+    .display-connect { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 32px; background: var(--bg-page); }
+    .display-connect.hidden { display: none; }
+    .connect-container { width: 100%; max-width: 360px; }
+    .connect-back { background: none; border: none; color: var(--text-muted); font-size: 13px; font-family: inherit; cursor: pointer; margin-bottom: 28px; display: flex; align-items: center; gap: 6px; }
+    .connect-back svg { width: 14px; height: 14px; }
+    .connect-header { text-align: center; margin-bottom: 36px; }
+    .connect-icon { width: 60px; height: 60px; margin: 0 auto 20px; background: var(--accent-dim); border-radius: 16px; display: flex; align-items: center; justify-content: center; }
+    .connect-icon svg { width: 26px; height: 26px; color: var(--accent); }
+    .connect-header h2 { font-size: 22px; font-weight: 600; margin-bottom: 6px; }
+    .connect-header p { font-size: 13px; color: var(--text-dim); }
+    .connect-input { width: 100%; padding: 18px; background: var(--bg-glass); backdrop-filter: blur(16px); border: 1px solid var(--border-glass); border-radius: var(--radius-lg); color: var(--text); font-size: 26px; font-family: 'JetBrains Mono', monospace; text-align: center; letter-spacing: 0.15em; text-transform: uppercase; outline: none; margin-bottom: 14px; }
+    .connect-input:focus { border-color: var(--accent); }
+    .connect-input::placeholder { color: var(--text-muted); }
+    .connect-btn { width: 100%; padding: 16px; border: none; border-radius: var(--radius-md); font-size: 15px; font-weight: 600; font-family: inherit; cursor: not-allowed; background: rgba(255,255,255,0.1); color: var(--text-muted); transition: all 0.2s; }
+    .connect-btn.ready { background: var(--accent); color: #000; cursor: pointer; }
+    .connect-btn.ready:hover { filter: brightness(1.1); }
+    .error-msg { margin-top: 14px; padding: 10px 14px; background: rgba(255, 77, 106, 0.1); border: 1px solid rgba(255, 77, 106, 0.2); border-radius: var(--radius-sm); color: var(--red); font-size: 12px; text-align: center; }
+    .error-msg.hidden { display: none; }
+    .display-prompter { position: fixed; inset: 0; background: #000; display: none; transition: background 0.3s ease; }
+    .display-prompter.active { display: block; }
+    .display-prompter.light-bg { background: #fff; }
+    .prompter-header { position: fixed; top: 0; left: 0; right: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; background: linear-gradient(to bottom, rgba(0,0,0,0.85) 0%, transparent 100%); }
+    .display-prompter.light-bg .prompter-header { background: linear-gradient(to bottom, rgba(255,255,255,0.85) 0%, transparent 100%); }
+    .prompter-status { display: flex; align-items: center; gap: 8px; padding: 7px 12px; background: rgba(255,255,255,0.06); backdrop-filter: blur(12px); border-radius: 100px; }
+    .display-prompter.light-bg .prompter-status { background: rgba(0,0,0,0.06); }
+    .prompter-status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent), 0 0 20px var(--accent-glow); animation: glow-pulse 2s ease-in-out infinite; }
+    .prompter-status-text { font-size: 11px; color: var(--accent); font-weight: 500; }
+    .prompter-controls { display: flex; gap: 6px; }
+    .prompter-btn { width: 40px; height: 40px; border-radius: 10px; border: none; cursor: pointer; background: rgba(255,255,255,0.08); color: var(--text-dim); display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+    .display-prompter.light-bg .prompter-btn { background: rgba(0,0,0,0.08); color: rgba(0,0,0,0.6); }
+    .prompter-btn:hover { background: rgba(255,255,255,0.12); }
+    .prompter-btn.active { background: var(--accent); color: #000; }
+    .prompter-btn svg { width: 18px; height: 18px; }
+    .prompter-focus { position: fixed; top: 50%; left: 0; right: 0; transform: translateY(-50%); pointer-events: none; display: flex; justify-content: space-between; padding: 0 14px; z-index: 50; }
+    .prompter-arrow { width: 0; height: 0; border-top: 12px solid transparent; border-bottom: 12px solid transparent; opacity: 0.85; }
+    .prompter-arrow.left { border-right: 20px solid var(--red); filter: drop-shadow(0 0 10px var(--red-glow)); }
+    .prompter-arrow.right { border-left: 20px solid var(--red); filter: drop-shadow(0 0 10px var(--red-glow)); }
+    .prompter-container { height: 100vh; overflow: hidden; display: flex; justify-content: center; }
+    .prompter-container.mirrored { transform: scaleX(-1); }
+    .prompter-container.flipped { transform: scaleY(-1); }
+    .prompter-container.mirrored.flipped { transform: scale(-1,-1); }
+    .prompter-text { width: 85%; max-width: 800px; text-align: center; font-size: 48px; font-weight: 400; line-height: 1.5; color: #ffffff; white-space: pre-wrap; will-change: transform; transform: translate3d(0, 0, 0); }
+    .display-prompter.light-bg .prompter-text { color: #000000; }
+    .prompter-footer { position: fixed; bottom: 0; left: 0; right: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%); }
+    .display-prompter.light-bg .prompter-footer { background: linear-gradient(to top, rgba(255,255,255,0.85) 0%, transparent 100%); }
+    .prompter-exit { padding: 9px 16px; background: rgba(255,255,255,0.06); border: none; border-radius: var(--radius-sm); color: var(--text-dim); font-size: 12px; font-family: inherit; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+    .display-prompter.light-bg .prompter-exit { background: rgba(0,0,0,0.06); color: rgba(0,0,0,0.6); }
+    .prompter-exit svg { width: 12px; height: 12px; }
+    .prompter-playstate { display: flex; align-items: center; gap: 10px; padding: 9px 16px; background: rgba(255,255,255,0.06); backdrop-filter: blur(12px); border-radius: 100px; }
+    .display-prompter.light-bg .prompter-playstate { background: rgba(0,0,0,0.06); }
+    .prompter-play-indicator { width: 9px; height: 9px; border-radius: 50%; background: var(--text-muted); transition: all 0.3s; }
+    .prompter-play-indicator.playing { background: var(--accent); box-shadow: 0 0 10px var(--accent-glow); }
+    .prompter-play-label { font-size: 12px; color: var(--text-dim); }
+    .display-prompter.light-bg .prompter-play-label { color: rgba(0,0,0,0.6); }
+    .prompter-time { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--accent); padding-left: 10px; border-left: 1px solid rgba(255,255,255,0.1); }
+
+    /* === SCRIPT SLOT BUTTONS === */
+    .script-slots { display: flex; align-items: center; gap: 4px; }
+    .script-slot-btn {
+      width: 28px; height: 28px; border-radius: var(--radius-sm);
+      border: 1.5px solid var(--border-glass); background: var(--bg-input);
+      color: var(--text-dim); font-size: 10px; font-weight: 700;
+      font-family: 'JetBrains Mono', monospace; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s; position: relative;
+    }
+    .script-slot-btn:hover { background: var(--bg-input-hover); color: var(--text); border-color: var(--border-hover); }
+    .script-slot-btn.active-slot { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 8px var(--accent-glow); }
+    .script-slot-btn.has-content::after {
+      content: ''; position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%);
+      width: 4px; height: 4px; border-radius: 50%; background: var(--text-muted);
+    }
+    .script-slot-btn.active-slot.has-content::after { background: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="mode-select" id="modeSelect">
+    <div class="mode-container">
+      <div class="logo">
+        <div class="logo-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
+        <h1>Splitklips Teleprompter</h1>
+        <p>Professional Sync</p>
+      </div>
+      <button class="mode-btn" id="btnController">
+        <div class="mode-btn-icon controller"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
+        <div class="mode-btn-text"><h3>Controller</h3><p>MacBook — Edit & control</p></div>
+      </button>
+      <button class="mode-btn" id="btnDisplay">
+        <div class="mode-btn-icon display"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></div>
+        <div class="mode-btn-text"><h3>Display</h3><p>iPad — Teleprompter view</p></div>
+      </button>
+    </div>
+  </div>
+  <div class="controller-view" id="controllerView">
+    <div class="top-toolbar">
+      <div class="toolbar-section">
+        <div class="brand"><div class="brand-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>Splitklips</div>
+        <div class="toolbar-divider"></div>
+        <div class="connection-badge" onclick="toggleConnectionPopup()"><span class="status-dot" id="statusDot"></span><span class="status-label" id="statusLabel">Connect to iPad</span></div>
+      </div>
+      <div class="toolbar-section">
+        <!-- SCRIPT SLOT BUTTONS -->
+        <div class="script-slots">
+          <button class="script-slot-btn active-slot" id="slotBtn1" onclick="switchSlot(1)">S1</button>
+          <button class="script-slot-btn" id="slotBtn2" onclick="switchSlot(2)">S2</button>
+          <button class="script-slot-btn" id="slotBtn3" onclick="switchSlot(3)">S3</button>
+          <button class="script-slot-btn" id="slotBtn4" onclick="switchSlot(4)">S4</button>
+        </div>
+        <div class="toolbar-divider"></div>
+        <button class="tool-btn" id="boldBtn" onclick="formatBold()" title="Bold"><b>B</b></button>
+        <button class="tool-btn" id="underlineBtn" onclick="formatUnderline()" title="Underline"><u>U</u></button>
+        <div class="toolbar-divider"></div>
+        <div class="color-picker-wrap"><span class="color-label">Text</span><input type="color" class="color-picker" id="colorPicker" value="#ffffff"></div>
+        <div class="toolbar-divider"></div>
+        <div class="bg-toggle"><span class="color-label">BG</span><button class="bg-toggle-btn dark active" id="bgDarkBtn" onclick="setBackground('dark')"></button><button class="bg-toggle-btn light" id="bgLightBtn" onclick="setBackground('light')"></button></div>
+      </div>
+      <div class="toolbar-section">
+        <div class="slider-wrap"><span class="slider-label">Size</span><input type="range" id="fontSlider" min="12" max="80" value="48" oninput="handleFontSize(this.value)"><span class="slider-value" id="fontLabel">48px</span></div>
+        <div class="toolbar-divider"></div>
+        <div class="slider-wrap"><span class="slider-label">Margins</span><input type="range" id="sideMarginSlider" min="0" max="40" value="7" oninput="handleSideMargin(this.value)"><span class="slider-value" id="sideMarginLabel">7%</span></div>
+        <div class="toolbar-divider"></div>
+        <div class="play-controls">
+          <button class="reset-btn" onclick="resetScroll()" title="Reset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></button>
+          <button class="play-btn" id="playBtn" onclick="togglePlay()"><svg id="playIcon" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg></button>
+          <div class="time-display" id="timeDisplay">--:--</div>
+        </div>
+      </div>
+      <div class="toolbar-section">
+        <div class="scroll-controls">
+          <button class="scroll-btn" onclick="nudgeScroll(-200)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="11,17 6,12 11,7"/><polyline points="18,17 13,12 18,7"/></svg></button>
+          <button class="scroll-btn" onclick="nudgeScroll(-50)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15,18 9,12 15,6"/></svg></button>
+          <span class="position-text" id="positionDisplay">0px</span>
+          <button class="scroll-btn" onclick="nudgeScroll(50)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9,18 15,12 9,6"/></svg></button>
+          <button class="scroll-btn" onclick="nudgeScroll(200)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="13,17 18,12 13,7"/><polyline points="6,17 11,12 6,7"/></svg></button>
+        </div>
+        <div class="toolbar-divider"></div>
+        <button class="tool-btn" id="mirrorBtn" onclick="toggleMirror()" title="Mirror (Display only)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/><line x1="12" y1="3" x2="12" y2="21"/></svg></button>
+        <button class="tool-btn" id="flipBtn" onclick="toggleFlip()" title="Flip (Display only)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v3m0 8v3a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3"/><line x1="3" y1="12" x2="21" y2="12"/></svg></button>
+        <div class="toolbar-divider"></div>
+        <button class="exit-btn" onclick="goBack()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+    </div>
+    <div class="toolbar-row-2">
+      <div class="slider-wrap"><span class="slider-label">Speed</span><input type="range" class="large-slider" id="speedSlider" min="10" max="200" value="60" oninput="handleSpeed(this.value)"><span class="slider-value" id="speedLabel">60px/s</span></div>
+    </div>
+    <div class="connection-popup" id="connectionPopup">
+      <button class="popup-close" onclick="toggleConnectionPopup()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      <div class="qr-wrapper" id="qrCode"></div>
+      <div class="peer-code" id="peerIdDisplay">------</div>
+      <div class="hint">Scan QR or enter code on iPad</div>
+    </div>
+    <div class="master-frame">
+      <div class="display-inner" id="displayInner">
+        <div class="focus-guide"><div class="focus-arrow left"></div><div class="focus-arrow right"></div></div>
+        <div class="editor-container" id="editorContainer">
+          <div class="editor-wrapper" id="editorWrapper">
+            <div class="editor" id="editor" contenteditable="true">Welcome to Splitklips Teleprompter.
+
+Start typing or paste your script here.
+
+The red arrows show your reading line.
+
+Press Space to start scrolling.
+
+Break a leg!</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="kbd-hints"><span><kbd>Space</kbd> Play</span><span><kbd>↑↓</kbd> Nudge</span><span><kbd>R</kbd> Reset</span><span><kbd>M</kbd> Mirror</span><span><kbd>F</kbd> Flip</span></div>
+  </div>
+  <div class="display-view" id="displayView">
+    <div class="display-connect" id="displayConnect">
+      <div class="connect-container">
+        <button class="connect-back" onclick="goBack()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12,19 5,12 12,5"/></svg>Back</button>
+        <div class="connect-header">
+          <div class="connect-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></div>
+          <h2>Connect to Controller</h2>
+          <p>Enter the code shown on your MacBook</p>
+        </div>
+        <input type="text" class="connect-input" id="connectInput" placeholder="TP-XXXXXX" maxlength="12" oninput="handleConnectInput(this)">
+        <button class="connect-btn" id="connectBtn" onclick="connectToController()">Connect</button>
+        <div class="error-msg hidden" id="displayError"></div>
+      </div>
+    </div>
+    <div class="display-prompter" id="displayPrompter">
+      <div class="prompter-header">
+        <div class="prompter-status"><span class="prompter-status-dot"></span><span class="prompter-status-text">Connected</span></div>
+        <div class="prompter-controls">
+          <button class="prompter-btn" id="prompterMirrorBtn" onclick="toggleMirrorLocal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/><line x1="12" y1="3" x2="12" y2="21"/></svg></button>
+          <button class="prompter-btn" id="prompterFlipBtn" onclick="toggleFlipLocal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v3m0 8v3a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3"/><line x1="3" y1="12" x2="21" y2="12"/></svg></button>
+        </div>
+      </div>
+      <div class="prompter-focus"><div class="prompter-arrow left"></div><div class="prompter-arrow right"></div></div>
+      <div class="prompter-container" id="prompterContainer"><div class="prompter-text" id="prompterText"></div></div>
+      <div class="prompter-footer">
+        <button class="prompter-exit" onclick="goBack()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12,19 5,12 12,5"/></svg>Exit</button>
+        <div class="prompter-playstate"><span class="prompter-play-indicator" id="prompterPlayIndicator"></span><span class="prompter-play-label" id="prompterPlayLabel">Paused</span><span class="prompter-time" id="prompterTime">--:--</span></div>
+      </div>
+    </div>
+  </div>
+  <script>
+    const FOCUS_LINE_OFFSET = 300;
+    
+    let state = { mode: null, peerId: '', connectionStatus: 'disconnected', scriptHtml: '', isPlaying: false, speed: 60, fontSize: 48, isMirrored: false, isFlipped: false, scrollPosition: 0, textColor: '#ffffff', bgMode: 'dark', sideMargin: 7 };
+    let peer = null, conn = null, animationId = null, lastTime = null, wakeLock = null;
+    let editorElement = null, editorWrapper = null, editorContainer = null, displayInner = null;
+    let debounceTimer = null, savedSelection = null;
+
+    // === SCRIPT SLOT MANAGEMENT ===
+    let activeSlot = 1;
+    const SLOT_KEYS = { 1: 'splitklips_script1', 2: 'splitklips_script2', 3: 'splitklips_script3', 4: 'splitklips_script4' };
+    const ACTIVE_SLOT_KEY = 'splitklips_activeSlot';
+
+    function saveSlot(slotNum, html) {
+      try { localStorage.setItem(SLOT_KEYS[slotNum], html); } catch(e) {}
+    }
+
+    function loadSlot(slotNum) {
+      try { return localStorage.getItem(SLOT_KEYS[slotNum]) || ''; } catch(e) { return ''; }
+    }
+
+    function switchSlot(slotNum) {
+      // Save current slot before switching
+      if (editorElement) {
+        saveSlot(activeSlot, editorElement.innerHTML);
+      }
+      activeSlot = slotNum;
+      try { localStorage.setItem(ACTIVE_SLOT_KEY, slotNum); } catch(e) {}
+      
+      // Load new slot content
+      const content = loadSlot(slotNum);
+      if (editorElement) {
+        editorElement.innerHTML = content;
+        state.scriptHtml = content;
+        // Reset scroll when switching scripts
+        state.scrollPosition = 0;
+        syncScrollPosition();
+        updatePositionDisplay();
+        updateTimeEstimate();
+        send('script', state.scriptHtml);
+        send('scroll', 0);
+      }
+      updateSlotButtons();
+    }
+
+    function updateSlotButtons() {
+      for (let i = 1; i <= 4; i++) {
+        const btn = document.getElementById('slotBtn' + i);
+        btn.classList.toggle('active-slot', i === activeSlot);
+        const content = loadSlot(i);
+        btn.classList.toggle('has-content', content.length > 0 && content !== '');
+      }
+    }
+
+    function autoSaveCurrentSlot() {
+      if (editorElement) {
+        saveSlot(activeSlot, editorElement.innerHTML);
+        updateSlotButtons();
+      }
+    }
+    // === END SCRIPT SLOT MANAGEMENT ===
+
+    function generatePeerId() { const c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let id = 'TP-'; for (let i = 0; i < 6; i++) id += c[Math.floor(Math.random() * c.length)]; return id; }
+    function formatTime(s) { if (!isFinite(s) || s < 0) return '--:--'; return Math.floor(s / 60) + ':' + Math.floor(s % 60).toString().padStart(2, '0'); }
+    function toggleConnectionPopup() { document.getElementById('connectionPopup').classList.toggle('visible'); }
+    function updateConnectionStatus(connected) {
+      const dot = document.getElementById('statusDot'), label = document.getElementById('statusLabel');
+      if (connected) { dot.classList.add('live'); label.classList.add('live'); label.textContent = 'Live'; }
+      else { dot.classList.remove('live'); label.classList.remove('live'); label.textContent = 'Connect to iPad'; }
+    }
+    function send(type, value) { if (conn && conn.open) conn.send({ type, value }); }
+    function saveSelection() { const sel = window.getSelection(); if (sel.rangeCount > 0) savedSelection = sel.getRangeAt(0).cloneRange(); }
+    function restoreSelection() { if (savedSelection) { const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(savedSelection); } }
+    function formatBold() { document.execCommand('bold', false, null); editorElement.focus(); syncScript(); }
+    function formatUnderline() { document.execCommand('underline', false, null); editorElement.focus(); syncScript(); }
+    
+    function applyTextColor(color) {
+      state.textColor = color;
+      restoreSelection();
+      const selection = window.getSelection();
+      if (!selection.rangeCount || selection.isCollapsed) { send('textColor', state.textColor); return; }
+      const range = selection.getRangeAt(0);
+      if (!editorElement.contains(range.commonAncestorContainer)) return;
+      const fragment = range.extractContents();
+      const span = document.createElement('span');
+      span.style.color = color;
+      span.appendChild(fragment);
+      range.insertNode(span);
+      editorElement.normalize();
+      selection.removeAllRanges();
+      editorElement.focus();
+      syncScript();
+      send('textColor', state.textColor);
+    }
+    
+    function setBackground(mode) {
+      state.bgMode = mode;
+      document.getElementById('bgDarkBtn').classList.toggle('active', mode === 'dark');
+      document.getElementById('bgLightBtn').classList.toggle('active', mode === 'light');
+      if (displayInner) displayInner.classList.toggle('light-bg', mode === 'light');
+      if (mode === 'light' && state.textColor === '#ffffff') { state.textColor = '#000000'; document.getElementById('colorPicker').value = '#000000'; }
+      else if (mode === 'dark' && state.textColor === '#000000') { state.textColor = '#ffffff'; document.getElementById('colorPicker').value = '#ffffff'; }
+      send('bgMode', state.bgMode);
+    }
+    
+    function handleSideMargin(v) { state.sideMargin = parseInt(v); document.getElementById('sideMarginLabel').textContent = v + '%'; updateMargins(); send('sideMargin', state.sideMargin); }
+    function updateMargins() { if (editorWrapper) editorWrapper.style.width = (100 - (state.sideMargin * 2)) + '%'; }
+    function updatePrompterMargins() { const pt = document.getElementById('prompterText'); if (pt) pt.style.width = (100 - (state.sideMargin * 2)) + '%'; }
+    function syncScript() { 
+      clearTimeout(debounceTimer); 
+      debounceTimer = setTimeout(() => { 
+        state.scriptHtml = editorElement.innerHTML; 
+        send('script', state.scriptHtml); 
+        // Auto-save to active slot
+        autoSaveCurrentSlot();
+      }, 50); 
+    }
+    function handleSpeed(v) { state.speed = parseInt(v); document.getElementById('speedLabel').textContent = v + 'px/s'; send('speed', state.speed); updateTimeEstimate(); }
+    function handleFontSize(v) { state.fontSize = parseInt(v); document.getElementById('fontLabel').textContent = v + 'px'; editorElement.style.fontSize = state.fontSize + 'px'; send('fontSize', state.fontSize); updateTimeEstimate(); }
+    function togglePlay() { state.isPlaying = !state.isPlaying; if (state.isPlaying) { startScrolling(); send('play'); } else { stopScrolling(); send('pause'); } updatePlayButton(); }
+    
+    function toggleMirror() { 
+      state.isMirrored = !state.isMirrored; 
+      document.getElementById('mirrorBtn').classList.toggle('active', state.isMirrored);
+      send('mirror', state.isMirrored); 
+    }
+    
+    function toggleFlip() { 
+      state.isFlipped = !state.isFlipped; 
+      document.getElementById('flipBtn').classList.toggle('active', state.isFlipped);
+      send('flip', state.isFlipped); 
+    }
+    
+    function toggleMirrorLocal() {
+      state.isMirrored = !state.isMirrored;
+      document.getElementById('prompterMirrorBtn').classList.toggle('active', state.isMirrored);
+      updatePrompterTransform();
+    }
+    
+    function toggleFlipLocal() {
+      state.isFlipped = !state.isFlipped;
+      document.getElementById('prompterFlipBtn').classList.toggle('active', state.isFlipped);
+      updatePrompterTransform();
+    }
+    
+    function resetScroll() { state.scrollPosition = 0; state.isPlaying = false; stopScrolling(); updatePlayButton(); syncScrollPosition(); updatePositionDisplay(); updateTimeEstimate(); send('reset'); }
+    function nudgeScroll(delta) { state.scrollPosition = Math.max(0, state.scrollPosition + delta); syncScrollPosition(); updatePositionDisplay(); updateTimeEstimate(); send('scroll', state.scrollPosition); }
+    function updatePlayButton() { const btn = document.getElementById('playBtn'), icon = document.getElementById('playIcon'); btn.classList.toggle('playing', state.isPlaying); icon.innerHTML = state.isPlaying ? '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>' : '<polygon points="5,3 19,12 5,21"/>'; }
+    function updatePositionDisplay() { document.getElementById('positionDisplay').textContent = Math.round(state.scrollPosition) + 'px'; }
+    
+    function updateTimeEstimate() { 
+      if (!editorWrapper || state.speed <= 0) return; 
+      const totalHeight = editorWrapper.scrollHeight;
+      const maxScroll = Math.max(0, totalHeight - FOCUS_LINE_OFFSET);
+      const rem = Math.max(0, maxScroll - state.scrollPosition); 
+      document.getElementById('timeDisplay').textContent = formatTime(rem / state.speed); 
+    }
+    
+    function syncScrollPosition() { 
+      if (editorWrapper) {
+        editorWrapper.style.transform = 'translate3d(0, ' + (-state.scrollPosition) + 'px, 0)'; 
+      }
+    }
+    
+    function updatePrompterTransform() { 
+      const c = document.getElementById('prompterContainer'); 
+      if (!c) return; 
+      let cn = 'prompter-container'; 
+      if (state.isMirrored) cn += ' mirrored'; 
+      if (state.isFlipped) cn += ' flipped'; 
+      c.className = cn; 
+    }
+    
+    function startScrolling() { lastTime = null; animationId = requestAnimationFrame(scrollLoop); }
+    function stopScrolling() { if (animationId) { cancelAnimationFrame(animationId); animationId = null; } }
+    
+    let syncCounter = 0;
+    function scrollLoop(timestamp) {
+      if (!lastTime) lastTime = timestamp;
+      const delta = timestamp - lastTime;
+      if (delta >= 16) {
+        const pixels = (state.speed / 1000) * delta;
+        state.scrollPosition += pixels;
+        lastTime = timestamp;
+        syncCounter++;
+        if (state.mode === 'controller') {
+          syncScrollPosition();
+          updatePositionDisplay();
+          if (syncCounter % 30 === 0) updateTimeEstimate();
+          if (syncCounter % 12 === 0) send('scroll', state.scrollPosition);
+        } else {
+          const pt = document.getElementById('prompterText');
+          if (pt) pt.style.transform = 'translate3d(0, ' + (-state.scrollPosition) + 'px, 0)';
+          if (syncCounter % 30 === 0) { 
+            const el = document.getElementById('prompterText'); 
+            const maxScroll = Math.max(0, (el ? el.scrollHeight : 0) - FOCUS_LINE_OFFSET);
+            const rem = Math.max(0, maxScroll - state.scrollPosition); 
+            document.getElementById('prompterTime').textContent = formatTime(rem / state.speed); 
+          }
+        }
+      }
+      if (state.isPlaying) animationId = requestAnimationFrame(scrollLoop);
+    }
+    
+    async function requestWakeLock() { if ('wakeLock' in navigator) try { wakeLock = await navigator.wakeLock.request('screen'); } catch(e){} }
+    function releaseWakeLock() { if (wakeLock) { wakeLock.release(); wakeLock = null; } }
+    
+    function startController() {
+      state.mode = 'controller';
+      document.getElementById('modeSelect').classList.add('hidden');
+      document.getElementById('controllerView').classList.add('active');
+      editorElement = document.getElementById('editor');
+      editorWrapper = document.getElementById('editorWrapper');
+      editorContainer = document.getElementById('editorContainer');
+      displayInner = document.getElementById('displayInner');
+
+      // Restore last active slot from localStorage
+      try {
+        const savedSlot = parseInt(localStorage.getItem(ACTIVE_SLOT_KEY));
+        if (savedSlot >= 1 && savedSlot <= 4) activeSlot = savedSlot;
+      } catch(e) {}
+
+      // Load saved content for active slot
+      const savedContent = loadSlot(activeSlot);
+      if (savedContent) {
+        editorElement.innerHTML = savedContent;
+      }
+      state.scriptHtml = editorElement.innerHTML;
+      
+      editorWrapper.style.paddingTop = FOCUS_LINE_OFFSET + 'px';
+      editorWrapper.style.paddingBottom = FOCUS_LINE_OFFSET + 'px';
+      
+      editorElement.addEventListener('input', syncScript);
+      editorElement.addEventListener('paste', () => setTimeout(syncScript, 10));
+      editorElement.addEventListener('mouseup', saveSelection);
+      editorElement.addEventListener('keyup', saveSelection);
+      const colorPicker = document.getElementById('colorPicker');
+      colorPicker.addEventListener('mousedown', saveSelection);
+      colorPicker.addEventListener('input', (e) => applyTextColor(e.target.value));
+      editorContainer.addEventListener('wheel', (e) => { e.preventDefault(); state.scrollPosition = Math.max(0, state.scrollPosition + e.deltaY); syncScrollPosition(); updatePositionDisplay(); updateTimeEstimate(); send('scroll', state.scrollPosition); }, { passive: false });
+      initController();
+      updateTimeEstimate();
+      updateMargins();
+      updateSlotButtons();
+    }
+    
+    function startDisplay() { state.mode = 'display'; document.getElementById('modeSelect').classList.add('hidden'); document.getElementById('displayView').classList.add('active'); }
+    
+    function initController() {
+      if (!window.Peer) { setTimeout(initController, 500); return; }
+      state.peerId = generatePeerId();
+      document.getElementById('peerIdDisplay').textContent = state.peerId;
+      document.getElementById('qrCode').innerHTML = '';
+      new QRCode(document.getElementById('qrCode'), { text: state.peerId, width: 100, height: 100, colorDark: '#000', colorLight: '#fff', correctLevel: QRCode.CorrectLevel.M });
+      peer = new Peer(state.peerId, { debug: 1, config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] } });
+      peer.on('open', () => { state.connectionStatus = 'waiting'; updateConnectionStatus(false); });
+      peer.on('connection', (connection) => {
+        conn = connection;
+        conn.on('open', () => { 
+          state.connectionStatus = 'connected'; 
+          updateConnectionStatus(true); 
+          conn.send({ 
+            type: 'sync', 
+            script: state.scriptHtml, 
+            isPlaying: state.isPlaying, 
+            speed: state.speed, 
+            fontSize: state.fontSize, 
+            isMirrored: state.isMirrored, 
+            isFlipped: state.isFlipped, 
+            scrollPosition: state.scrollPosition, 
+            textColor: state.textColor, 
+            bgMode: state.bgMode, 
+            sideMargin: state.sideMargin,
+            focusLineOffset: FOCUS_LINE_OFFSET
+          }); 
+        });
+        conn.on('close', () => { state.connectionStatus = 'waiting'; updateConnectionStatus(false); conn = null; });
+      });
+      peer.on('error', (err) => { if (err.type === 'unavailable-id') { peer.destroy(); setTimeout(initController, 100); } });
+      peer.on('disconnected', () => peer.reconnect());
+    }
+    
+    function connectToController() {
+      const input = document.getElementById('connectInput').value.toUpperCase().trim();
+      if (input.length < 6) return;
+      document.getElementById('connectBtn').textContent = 'Connecting...';
+      peer = new Peer(undefined, { debug: 1, config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] } });
+      peer.on('open', () => {
+        conn = peer.connect(input, { reliable: true });
+        conn.on('open', () => { state.connectionStatus = 'connected'; document.getElementById('displayConnect').classList.add('hidden'); document.getElementById('displayPrompter').classList.add('active'); requestWakeLock(); });
+        conn.on('data', handleIncomingData);
+        conn.on('close', () => { document.getElementById('displayPrompter').classList.remove('active'); document.getElementById('displayConnect').classList.remove('hidden'); document.getElementById('connectBtn').textContent = 'Connect'; });
+      });
+      peer.on('error', (err) => { const e = document.getElementById('displayError'); e.textContent = err.type === 'peer-unavailable' ? 'Controller not found' : 'Error: ' + err.type; e.classList.remove('hidden'); document.getElementById('connectBtn').textContent = 'Connect'; });
+    }
+    
+    let displayFocusOffset = FOCUS_LINE_OFFSET;
+    
+    function handleIncomingData(data) {
+      switch (data.type) {
+        case 'sync': 
+          state.scriptHtml = data.script; 
+          state.isPlaying = data.isPlaying; 
+          state.speed = data.speed; 
+          state.fontSize = data.fontSize; 
+          state.isMirrored = data.isMirrored; 
+          state.isFlipped = data.isFlipped; 
+          state.scrollPosition = data.scrollPosition; 
+          state.textColor = data.textColor || '#ffffff'; 
+          state.bgMode = data.bgMode || 'dark'; 
+          state.sideMargin = data.sideMargin || 7; 
+          if (data.focusLineOffset) displayFocusOffset = data.focusLineOffset;
+          if (state.isPlaying) startScrolling(); 
+          break;
+        case 'play': state.isPlaying = true; startScrolling(); break;
+        case 'pause': state.isPlaying = false; stopScrolling(); break;
+        case 'speed': state.speed = data.value; break;
+        case 'fontSize': state.fontSize = data.value; break;
+        case 'mirror': state.isMirrored = data.value; break;
+        case 'flip': state.isFlipped = data.value; break;
+        case 'script': state.scriptHtml = data.value; break;
+        case 'scroll': state.scrollPosition = data.value; break;
+        case 'reset': state.scrollPosition = 0; state.isPlaying = false; stopScrolling(); break;
+        case 'textColor': state.textColor = data.value; break;
+        case 'bgMode': state.bgMode = data.value; break;
+        case 'sideMargin': state.sideMargin = data.value; break;
+      }
+      updatePrompterUI();
+    }
+    
+    function updatePrompterUI() {
+      const pt = document.getElementById('prompterText'), dp = document.getElementById('displayPrompter');
+      pt.innerHTML = state.scriptHtml;
+      pt.style.fontSize = state.fontSize + 'px';
+      pt.style.paddingTop = displayFocusOffset + 'px';
+      pt.style.paddingBottom = displayFocusOffset + 'px';
+      pt.style.transform = 'translate3d(0, ' + (-state.scrollPosition) + 'px, 0)';
+      dp.classList.toggle('light-bg', state.bgMode === 'light');
+      updatePrompterMargins();
+      updatePrompterTransform();
+      document.getElementById('prompterMirrorBtn').classList.toggle('active', state.isMirrored);
+      document.getElementById('prompterFlipBtn').classList.toggle('active', state.isFlipped);
+      document.getElementById('prompterPlayIndicator').classList.toggle('playing', state.isPlaying);
+      document.getElementById('prompterPlayLabel').textContent = state.isPlaying ? 'Playing' : 'Paused';
+    }
+    
+    function handleConnectInput(input) { input.value = input.value.toUpperCase(); document.getElementById('connectBtn').classList.toggle('ready', input.value.length >= 6); }
+    
+    function goBack() {
+      // Save current slot before leaving
+      autoSaveCurrentSlot();
+      if (peer) { peer.destroy(); peer = null; }
+      conn = null; stopScrolling(); releaseWakeLock();
+      state = { mode: null, peerId: '', connectionStatus: 'disconnected', scriptHtml: '', isPlaying: false, speed: 60, fontSize: 48, isMirrored: false, isFlipped: false, scrollPosition: 0, textColor: '#ffffff', bgMode: 'dark', sideMargin: 7 };
+      document.getElementById('modeSelect').classList.remove('hidden');
+      document.getElementById('controllerView').classList.remove('active');
+      document.getElementById('displayView').classList.remove('active');
+      document.getElementById('displayConnect').classList.remove('hidden');
+      document.getElementById('displayPrompter').classList.remove('active');
+      document.getElementById('connectInput').value = '';
+      document.getElementById('connectBtn').textContent = 'Connect';
+      document.getElementById('connectBtn').classList.remove('ready');
+      document.getElementById('connectionPopup').classList.remove('visible');
+    }
+    
+    document.addEventListener('keydown', (e) => {
+      if (state.mode !== 'controller') return;
+      const inEditor = document.activeElement === editorElement;
+      if (inEditor && e.ctrlKey && e.code === 'KeyB') { e.preventDefault(); formatBold(); return; }
+      if (inEditor && e.ctrlKey && e.code === 'KeyU') { e.preventDefault(); formatUnderline(); return; }
+      if (inEditor && !e.ctrlKey && !e.metaKey && !e.altKey) return;
+      if (e.code === 'Space' && !inEditor) { e.preventDefault(); togglePlay(); }
+      else if (e.code === 'ArrowUp') { e.preventDefault(); nudgeScroll(-50); }
+      else if (e.code === 'ArrowDown') { e.preventDefault(); nudgeScroll(50); }
+      else if (e.code === 'PageUp') { e.preventDefault(); nudgeScroll(-200); }
+      else if (e.code === 'PageDown') { e.preventDefault(); nudgeScroll(200); }
+      else if (e.code === 'KeyR' && !inEditor) { e.preventDefault(); resetScroll(); }
+      else if (e.code === 'KeyM' && !inEditor) { e.preventDefault(); toggleMirror(); }
+      else if (e.code === 'KeyF' && !inEditor) { e.preventDefault(); toggleFlip(); }
+    });
+    
+    function addTapListener(el, cb) {
+      let moved = false;
+      el.addEventListener('touchstart', () => moved = false, { passive: true });
+      el.addEventListener('touchmove', () => moved = true, { passive: true });
+      el.addEventListener('touchend', (e) => { if (!moved) { e.preventDefault(); cb(); } });
+      el.addEventListener('click', (e) => { e.preventDefault(); cb(); });
+    }
+    addTapListener(document.getElementById('btnController'), startController);
+    addTapListener(document.getElementById('btnDisplay'), startDisplay);
+  </script>
+</body>
+</html>
