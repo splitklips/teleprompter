@@ -448,7 +448,7 @@ Break a leg!</div>
       }, 50); 
     }
     function handleSpeed(v) { state.speed = parseInt(v); document.getElementById('speedLabel').textContent = v + 'px/s'; send('speed', state.speed); updateTimeEstimate(); }
-    function handleFontSize(v) { state.fontSize = parseInt(v); document.getElementById('fontLabel').textContent = v + 'px'; editorElement.style.fontSize = state.fontSize + 'px'; send('fontSize', state.fontSize); updateTimeEstimate(); }
+    function handleFontSize(v) { state.fontSize = parseInt(v); document.getElementById('fontLabel').textContent = v + 'px'; if (editorElement) editorElement.style.fontSize = state.fontSize + 'px'; send('fontSize', state.fontSize); setTimeout(updateTimeEstimate, 50); }
     function togglePlay() { state.isPlaying = !state.isPlaying; if (state.isPlaying) { startScrolling(); send('play'); } else { stopScrolling(); send('pause'); } updatePlayButton(); }
     
     function toggleMirror() { 
